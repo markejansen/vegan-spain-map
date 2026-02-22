@@ -1,20 +1,22 @@
 import type { Restaurant, ChatMessage } from "./types";
 
+const API_BASE = import.meta.env.VITE_API_URL || "";
+
 export async function fetchRestaurants(city: string): Promise<Restaurant[]> {
-  const res = await fetch(`/api/restaurants?city=${encodeURIComponent(city)}`);
+  const res = await fetch(`${API_BASE}/api/restaurants?city=${encodeURIComponent(city)}`);
   if (!res.ok) throw new Error("Failed to fetch restaurants");
   return res.json();
 }
 
 export function photoUrl(ref: string): string {
-  return `/api/restaurants/photo?ref=${encodeURIComponent(ref)}`;
+  return `${API_BASE}/api/restaurants/photo?ref=${encodeURIComponent(ref)}`;
 }
 
 export async function* streamChat(
   messages: ChatMessage[],
   restaurants: Restaurant[]
 ): AsyncGenerator<string> {
-  const res = await fetch("/api/chat", {
+  const res = await fetch(`${API_BASE}/api/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ messages, restaurants }),
