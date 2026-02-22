@@ -7,12 +7,7 @@ import chatRouter from "./routes/chat.js";
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    /\.vercel\.app$/,
-  ]
-}));
+app.use(cors({ origin: true }));
 app.use(express.json());
 
 app.use("/api/restaurants", restaurantsRouter);
