@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import Map from "./components/Map";
+import MapView from "./components/Map";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
 import { fetchRestaurants, fetchRestaurantsByLocation } from "./api";
@@ -114,7 +114,7 @@ export default function App() {
 
         {error && <div style={styles.errorBanner}>{error}</div>}
 
-        <Map
+        <MapView
           restaurants={restaurants}
           selectedId={selectedId}
           onSelect={setSelectedId}
