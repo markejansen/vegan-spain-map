@@ -21,12 +21,24 @@ const CITIES = [
   "Palma",
 ];
 
+function useMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return isMobile;
+}
+
 export default function App() {
   const [city, setCity] = useState("Spain");
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<"map" | "list">("map");
+  const isMobile = useMobile();
   const searchedTiles = useRef<Set<string>>(new Set());
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -52,7 +64,6 @@ export default function App() {
   const handleBoundsChange = useCallback((lat: number, lng: number, zoom: number) => {
     if (zoom < 11) return;
 
-    // Tile key: round to ~5km grid to avoid duplicate searches
     const tileKey = `${(lat * 20).toFixed(0)},${(lng * 20).toFixed(0)}`;
     if (searchedTiles.current.has(tileKey)) return;
 
@@ -82,6 +93,65 @@ export default function App() {
         <p style={{ marginTop: 12, color: "#6b7280" }}>
           Add <code>VITE_GOOGLE_MAPS_KEY=your_key</code> to <code>client/.env</code> and restart Vite.
         </p>
+      </div>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <div style={styles.mobileContainer}>
+        {mobileTab === "map" ? (
+          <div style={styles.mobileMapArea}>
+            <div style={styles.cityBarMobile}>
+              {CITIES.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setCity(c)}
+                  style={{
+                    ...styles.cityBtn,
+                    ...(city === c ? styles.cityBtnActive : {}),
+                  }}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+            {error && <div style={styles.errorBanner}>{error}</div>}
+            <MapView
+              restaurants={restaurants}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              googleMapsKey={GOOGLE_MAPS_KEY}
+              onBoundsChange={handleBoundsChange}
+            />
+            <ChatPanel restaurants={restaurants} isMobile />
+          </div>
+        ) : (
+          <div style={styles.mobileSidebarArea}>
+            <Sidebar
+              restaurants={restaurants}
+              selectedId={selectedId}
+              onSelect={(id) => { setSelectedId(id); setMobileTab("map"); }}
+              loading={loading}
+              isMobile
+            />
+          </div>
+        )}
+
+        <div style={styles.tabBar}>
+          <button
+            style={{ ...styles.tabBtn, ...(mobileTab === "map" ? styles.tabBtnActive : {}) }}
+            onClick={() => setMobileTab("map")}
+          >
+            🗺 Map
+          </button>
+          <button
+            style={{ ...styles.tabBtn, ...(mobileTab === "list" ? styles.tabBtnActive : {}) }}
+            onClick={() => setMobileTab("list")}
+          >
+            📋 List
+          </button>
+        </div>
       </div>
     );
   }
@@ -142,6 +212,46 @@ const styles: Record<string, React.CSSProperties> = {
     display: "flex",
     flexDirection: "column",
   },
+  mobileContainer: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100vh",
+    width: "100vw",
+    overflow: "hidden",
+  },
+  mobileMapArea: {
+    flex: 1,
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+  },
+  mobileSidebarArea: {
+    flex: 1,
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+  },
+  tabBar: {
+    display: "flex",
+    borderTop: "1px solid #e5e7eb",
+    background: "#fff",
+    flexShrink: 0,
+  },
+  tabBtn: {
+    flex: 1,
+    padding: "12px 0",
+    border: "none",
+    background: "none",
+    fontSize: 14,
+    fontWeight: 500,
+    color: "#6b7280",
+    cursor: "pointer",
+  },
+  tabBtnActive: {
+    color: "#166534",
+    borderTop: "2px solid #166534",
+  },
   cityBar: {
     position: "absolute",
     top: 16,
@@ -157,6 +267,22 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: "wrap",
     justifyContent: "center",
     maxWidth: "90%",
+  },
+  cityBarMobile: {
+    position: "absolute",
+    top: 12,
+    left: "50%",
+    transform: "translateX(-50%)",
+    zIndex: 10,
+    display: "flex",
+    gap: 4,
+    background: "#fff",
+    padding: "6px 10px",
+    borderRadius: 24,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    maxWidth: "95%",
   },
   cityBtn: {
     padding: "5px 12px",

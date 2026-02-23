@@ -7,6 +7,7 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   loading: boolean;
+  isMobile?: boolean;
 }
 
 type Filter = "all" | "vegan" | "options";
@@ -14,7 +15,7 @@ type Filter = "all" | "vegan" | "options";
 const priceLabel = (level: number | null) =>
   level != null ? "€".repeat(level + 1) : "";
 
-export default function Sidebar({ restaurants, selectedId, onSelect, loading }: Props) {
+export default function Sidebar({ restaurants, selectedId, onSelect, loading, isMobile }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const [expanded, setExpanded] = useState<string | null>(null);
 
@@ -30,7 +31,7 @@ export default function Sidebar({ restaurants, selectedId, onSelect, loading }: 
   };
 
   return (
-    <aside style={styles.sidebar}>
+    <aside style={{ ...styles.sidebar, ...(isMobile ? styles.sidebarMobile : {}) }}>
       <div style={styles.header}>
         <h1 style={styles.title}>🌿 Vegan Spain</h1>
         <p style={styles.subtitle}>Best spots across Spain</p>
@@ -140,6 +141,11 @@ const styles: Record<string, React.CSSProperties> = {
     background: "#fff",
     borderRight: "1px solid #e5e7eb",
     flexShrink: 0,
+  },
+  sidebarMobile: {
+    width: "100%",
+    height: "100%",
+    borderRight: "none",
   },
   header: {
     padding: "20px 16px 12px",

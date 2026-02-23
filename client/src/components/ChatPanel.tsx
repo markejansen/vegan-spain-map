@@ -4,9 +4,10 @@ import { streamChat } from "../api";
 
 interface Props {
   restaurants: Restaurant[];
+  isMobile?: boolean;
 }
 
-export default function ChatPanel({ restaurants }: Props) {
+export default function ChatPanel({ restaurants, isMobile }: Props) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -60,7 +61,7 @@ export default function ChatPanel({ restaurants }: Props) {
       {/* Floating button */}
       <button
         onClick={() => setOpen((o) => !o)}
-        style={styles.fab}
+        style={{ ...styles.fab, ...(isMobile ? styles.fabMobile : {}) }}
         title="Chat with AI guide"
       >
         {open ? "✕" : "💬"}
@@ -68,7 +69,7 @@ export default function ChatPanel({ restaurants }: Props) {
 
       {/* Chat panel */}
       {open && (
-        <div style={styles.panel}>
+        <div style={{ ...styles.panel, ...(isMobile ? styles.panelMobile : {}) }}>
           <div style={styles.panelHeader}>
             <span>🌿 AI Food Guide</span>
             <span style={{ fontSize: 12, color: "#6ee7b7" }}>Powered by Claude</span>
@@ -221,5 +222,15 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 18,
     fontWeight: 700,
     flexShrink: 0,
+  },
+  fabMobile: {
+    bottom: 72,
+    right: 16,
+  },
+  panelMobile: {
+    bottom: 136,
+    right: 16,
+    width: "calc(100vw - 32px)",
+    height: 420,
   },
 };
