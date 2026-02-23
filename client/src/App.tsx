@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Map from "./components/Map";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
-import { fetchRestaurants } from "./api";
+import { fetchRestaurants, fetchRestaurantsByLocation } from "./api";
 import type { Restaurant } from "./types";
 
 // ⚠️  The Maps JS API key is safe to expose in client-side code
@@ -27,11 +27,14 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchedTiles = useRef<Set<string>>(new Set());
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async (c: string) => {
     setLoading(true);
     setError(null);
     setSelectedId(null);
+    searchedTiles.current.clear();
     try {
       const data = await fetchRestaurants(c);
       setRestaurants(data);
@@ -45,6 +48,32 @@ export default function App() {
   useEffect(() => {
     load(city);
   }, [city, load]);
+
+  const handleBoundsChange = useCallback((lat: number, lng: number, zoom: number) => {
+    if (zoom < 11) return;
+
+    // Tile key: round to ~5km grid to avoid duplicate searches
+    const tileKey = `${(lat * 20).toFixed(0)},${(lng * 20).toFixed(0)}`;
+    if (searchedTiles.current.has(tileKey)) return;
+
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(async () => {
+      searchedTiles.current.add(tileKey);
+      const radius = zoom >= 14 ? 1500 : zoom >= 12 ? 3000 : 5000;
+      try {
+        const nearby = await fetchRestaurantsByLocation(lat, lng, radius);
+        setRestaurants(prev => {
+          const merged = new Map(prev.map(r => [r.id, r]));
+          for (const r of nearby) {
+            if (!merged.has(r.id) || r.isFullyVegan) merged.set(r.id, r);
+          }
+          return Array.from(merged.values()).sort((a, b) => b.rating - a.rating);
+        });
+      } catch {
+        // silently ignore scroll errors
+      }
+    }, 1500);
+  }, []);
 
   if (!GOOGLE_MAPS_KEY) {
     return (
@@ -90,6 +119,7 @@ export default function App() {
           selectedId={selectedId}
           onSelect={setSelectedId}
           googleMapsKey={GOOGLE_MAPS_KEY}
+          onBoundsChange={handleBoundsChange}
         />
       </div>
 

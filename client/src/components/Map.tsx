@@ -7,11 +7,12 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   googleMapsKey: string;
+  onBoundsChange?: (lat: number, lng: number, zoom: number) => void;
 }
 
 const SPAIN_CENTER = { lat: 40.4168, lng: -3.7038 };
 
-export default function MapView({ restaurants, selectedId, onSelect, googleMapsKey }: Props) {
+export default function MapView({ restaurants, selectedId, onSelect, googleMapsKey, onBoundsChange }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<Map<string, google.maps.Marker>>(new Map());
@@ -32,8 +33,18 @@ export default function MapView({ restaurants, selectedId, onSelect, googleMapsK
         ],
       });
       infoWindowRef.current = new google.maps.InfoWindow();
+
+      if (onBoundsChange) {
+        mapInstanceRef.current.addListener("idle", () => {
+          const center = mapInstanceRef.current!.getCenter();
+          const zoom = mapInstanceRef.current!.getZoom();
+          if (center && zoom !== undefined) {
+            onBoundsChange(center.lat(), center.lng(), zoom);
+          }
+        });
+      }
     });
-  }, [googleMapsKey]);
+  }, [googleMapsKey, onBoundsChange]);
 
   // Update markers when restaurants change
   useEffect(() => {

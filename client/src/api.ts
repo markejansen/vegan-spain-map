@@ -12,6 +12,12 @@ export function photoUrl(ref: string): string {
   return `${API_BASE}/api/restaurants/photo?ref=${encodeURIComponent(ref)}`;
 }
 
+export async function fetchRestaurantsByLocation(lat: number, lng: number, radius: number): Promise<Restaurant[]> {
+  const res = await fetch(`${API_BASE}/api/restaurants/nearby?lat=${lat}&lng=${lng}&radius=${radius}`);
+  if (!res.ok) throw new Error("Failed to fetch nearby restaurants");
+  return res.json();
+}
+
 export async function* streamChat(
   messages: ChatMessage[],
   restaurants: Restaurant[]

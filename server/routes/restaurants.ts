@@ -4,7 +4,7 @@ const router = Router();
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY!;
 const PLACES_URL = "https://maps.googleapis.com/maps/api/place/textsearch/json";
-const DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json";
+const NEARBY_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json";
 
 interface PlaceResult {
   place_id: string;
@@ -99,6 +99,55 @@ router.get("/", async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch restaurants" });
+  }
+});
+
+// Nearby search by coordinates
+async function searchNearby(lat: number, lng: number, radius: number, keyword: string): Promise<PlaceResult[]> {
+  const url = new URL(NEARBY_URL);
+  url.searchParams.set("location", `${lat},${lng}`);
+  url.searchParams.set("radius", String(radius));
+  url.searchParams.set("type", "restaurant");
+  url.searchParams.set("keyword", keyword);
+  url.searchParams.set("key", GOOGLE_API_KEY);
+  url.searchParams.set("language", "en");
+
+  const res = await fetch(url.toString());
+  const data = await res.json() as { results: PlaceResult[]; status: string };
+
+  if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
+    throw new Error(`Places API error: ${data.status}`);
+  }
+  return data.results || [];
+}
+
+router.get("/nearby", async (req: Request, res: Response) => {
+  const { lat, lng, radius = "3000" } = req.query as { lat: string; lng: string; radius?: string };
+
+  if (!lat || !lng) {
+    res.status(400).json({ error: "lat and lng required" });
+    return;
+  }
+
+  if (!GOOGLE_API_KEY) {
+    res.status(500).json({ error: "GOOGLE_API_KEY not configured" });
+    return;
+  }
+
+  try {
+    const [veganPlaces, veganOptionPlaces] = await Promise.all([
+      searchNearby(parseFloat(lat), parseFloat(lng), parseInt(radius), "vegan"),
+      searchNearby(parseFloat(lat), parseFloat(lng), parseInt(radius), "vegan options"),
+    ]);
+
+    const map = new Map<string, Restaurant>();
+    for (const place of veganOptionPlaces) map.set(place.place_id, toRestaurant(place, false));
+    for (const place of veganPlaces) map.set(place.place_id, toRestaurant(place, true));
+
+    res.json(Array.from(map.values()).sort((a, b) => b.rating - a.rating));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch nearby restaurants" });
   }
 });
 
